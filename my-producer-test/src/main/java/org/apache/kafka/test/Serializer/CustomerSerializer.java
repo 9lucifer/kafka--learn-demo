@@ -1,6 +1,5 @@
 package org.apache.kafka.test.Serializer;
 
-import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.test.model.Customer;
 import org.slf4j.Logger;
@@ -39,6 +38,7 @@ public class CustomerSerializer implements Serializer<Customer> {
             return buffer.array();
         }catch (Exception e){
             log.error(e.toString());
+            return new byte[0];
         }
     }
 

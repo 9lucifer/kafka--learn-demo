@@ -1,245 +1,267 @@
-Apache Kafka
-=================
-See our [web site](https://kafka.apache.org) for details on the project.
-
-You need to have [Java](http://www.oracle.com/technetwork/java/javase/downloads/index.html) installed.
-
-We build and test Apache Kafka with Java 8, 11 and 15. We set the `release` parameter in javac and scalac
-to `8` to ensure the generated binaries are compatible with Java 8 or higher (independently of the Java version
-used for compilation).
-
-Scala 2.13 is used by default, see below for how to use a different Scala version or all of the supported Scala versions.
-
-### Build a jar and run it ###
-    ./gradlew jar
-
-Follow instructions in https://kafka.apache.org/quickstart
-
-### Build source jar ###
-    ./gradlew srcJar
-
-### Build aggregated javadoc ###
-    ./gradlew aggregatedJavadoc
-
-### Build javadoc and scaladoc ###
-    ./gradlew javadoc
-    ./gradlew javadocJar # builds a javadoc jar for each module
-    ./gradlew scaladoc
-    ./gradlew scaladocJar # builds a scaladoc jar for each module
-    ./gradlew docsJar # builds both (if applicable) javadoc and scaladoc jars for each module
-
-### Run unit/integration tests ###
-    ./gradlew test # runs both unit and integration tests
-    ./gradlew unitTest
-    ./gradlew integrationTest
-    
-### Force re-running tests without code change ###
-    ./gradlew cleanTest test
-    ./gradlew cleanTest unitTest
-    ./gradlew cleanTest integrationTest
-
-### Running a particular unit/integration test ###
-    ./gradlew clients:test --tests RequestResponseTest
-
-### Running a particular test method within a unit/integration test ###
-    ./gradlew core:test --tests kafka.api.ProducerFailureHandlingTest.testCannotSendToInternalTopic
-    ./gradlew clients:test --tests org.apache.kafka.clients.MetadataTest.testMetadataUpdateWaitTime
-
-### Running a particular unit/integration test with log4j output ###
-Change the log4j setting in either `clients/src/test/resources/log4j.properties` or `core/src/test/resources/log4j.properties`
-
-    ./gradlew clients:test --tests RequestResponseTest
-
-### Specifying test retries ###
-By default, each failed test is retried once up to a maximum of five retries per test run. Tests are retried at the end of the test task. Adjust these parameters in the following way:
-
-    ./gradlew test -PmaxTestRetries=1 -PmaxTestRetryFailures=5
-    
-See [Test Retry Gradle Plugin](https://github.com/gradle/test-retry-gradle-plugin) for more details.
-
-### Generating test coverage reports ###
-Generate coverage reports for the whole project:
-
-    ./gradlew reportCoverage -PenableTestCoverage=true
-
-Generate coverage for a single module, i.e.: 
-
-    ./gradlew clients:reportCoverage -PenableTestCoverage=true
-    
-### Building a binary release gzipped tar ball ###
-    ./gradlew clean releaseTarGz
-
-The above command will fail if you haven't set up the signing key. To bypass signing the artifact, you can run:
-
-    ./gradlew clean releaseTarGz -x signArchives
-
-The release file can be found inside `./core/build/distributions/`.
-
-### Building auto generated messages ###
-Sometimes it is only necessary to rebuild the RPC auto-generated message data when switching between branches, as they could
-fail due to code changes. You can just run:
- 
-    ./gradlew processMessages processTestMessages
-
-### Cleaning the build ###
-    ./gradlew clean
-
-### Running a task with one of the Scala versions available (2.12.x or 2.13.x) ###
-*Note that if building the jars with a version other than 2.13.x, you need to set the `SCALA_VERSION` variable or change it in `bin/kafka-run-class.sh` to run the quick start.*
-
-You can pass either the major version (eg 2.12) or the full version (eg 2.12.7):
-
-    ./gradlew -PscalaVersion=2.12 jar
-    ./gradlew -PscalaVersion=2.12 test
-    ./gradlew -PscalaVersion=2.12 releaseTarGz
-
-### Running a task with all the scala versions enabled by default ###
-
-Invoke the `gradlewAll` script followed by the task(s):
-
-    ./gradlewAll test
-    ./gradlewAll jar
-    ./gradlewAll releaseTarGz
-
-### Running a task for a specific project ###
-This is for `core`, `examples` and `clients`
-
-    ./gradlew core:jar
-    ./gradlew core:test
-
-Streams has multiple sub-projects, but you can run all the tests:
-
-    ./gradlew :streams:testAll
-
-### Listing all gradle tasks ###
-    ./gradlew tasks
-
-### Building IDE project ####
-*Note that this is not strictly necessary (IntelliJ IDEA has good built-in support for Gradle projects, for example).*
-
-    ./gradlew eclipse
-    ./gradlew idea
-
-The `eclipse` task has been configured to use `${project_dir}/build_eclipse` as Eclipse's build directory. Eclipse's default
-build directory (`${project_dir}/bin`) clashes with Kafka's scripts directory and we don't use Gradle's build directory
-to avoid known issues with this configuration.
-
-### Publishing the jar for all version of Scala and for all projects to maven ###
-    ./gradlewAll uploadArchives
-
-Please note for this to work you should create/update `${GRADLE_USER_HOME}/gradle.properties` (typically, `~/.gradle/gradle.properties`) and assign the following variables
-
-    mavenUrl=
-    mavenUsername=
-    mavenPassword=
-    signing.keyId=
-    signing.password=
-    signing.secretKeyRingFile=
-
-### Publishing the streams quickstart archetype artifact to maven ###
-For the Streams archetype project, one cannot use gradle to upload to maven; instead the `mvn deploy` command needs to be called at the quickstart folder:
-
-    cd streams/quickstart
-    mvn deploy
-
-Please note for this to work you should create/update user maven settings (typically, `${USER_HOME}/.m2/settings.xml`) to assign the following variables
-
-    <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
-                           https://maven.apache.org/xsd/settings-1.0.0.xsd">
-    ...                           
-    <servers>
-       ...
-       <server>
-          <id>apache.snapshots.https</id>
-          <username>${maven_username}</username>
-          <password>${maven_password}</password>
-       </server>
-       <server>
-          <id>apache.releases.https</id>
-          <username>${maven_username}</username>
-          <password>${maven_password}</password>
-        </server>
-        ...
-     </servers>
-     ...
-
-
-### Installing the jars to the local Maven repository ###
-    ./gradlewAll install
-
-### Building the test jar ###
-    ./gradlew testJar
-
-### Determining how transitive dependencies are added ###
-    ./gradlew core:dependencies --configuration runtime
-
-### Determining if any dependencies could be updated ###
-    ./gradlew dependencyUpdates
-
-### Running code quality checks ###
-There are two code quality analysis tools that we regularly run, spotbugs and checkstyle.
-
-#### Checkstyle ####
-Checkstyle enforces a consistent coding style in Kafka.
-You can run checkstyle using:
-
-    ./gradlew checkstyleMain checkstyleTest
-
-The checkstyle warnings will be found in `reports/checkstyle/reports/main.html` and `reports/checkstyle/reports/test.html` files in the
-subproject build directories. They are also printed to the console. The build will fail if Checkstyle fails.
-
-#### Spotbugs ####
-Spotbugs uses static analysis to look for bugs in the code.
-You can run spotbugs using:
-
-    ./gradlew spotbugsMain spotbugsTest -x test
-
-The spotbugs warnings will be found in `reports/spotbugs/main.html` and `reports/spotbugs/test.html` files in the subproject build
-directories.  Use -PxmlSpotBugsReport=true to generate an XML report instead of an HTML one.
-
-### Common build options ###
-
-The following options should be set with a `-P` switch, for example `./gradlew -PmaxParallelForks=1 test`.
-
-* `commitId`: sets the build commit ID as .git/HEAD might not be correct if there are local commits added for build purposes.
-* `mavenUrl`: sets the URL of the maven deployment repository (`file://path/to/repo` can be used to point to a local repository).
-* `maxParallelForks`: limits the maximum number of processes for each task.
-* `ignoreFailures`: ignore test failures from junit
-* `showStandardStreams`: shows standard out and standard error of the test JVM(s) on the console.
-* `skipSigning`: skips signing of artifacts.
-* `testLoggingEvents`: unit test events to be logged, separated by comma. For example `./gradlew -PtestLoggingEvents=started,passed,skipped,failed test`.
-* `xmlSpotBugsReport`: enable XML reports for spotBugs. This also disables HTML reports as only one can be enabled at a time.
-* `maxTestRetries`: the maximum number of retries for a failing test case.
-* `maxTestRetryFailures`: maximum number of test failures before retrying is disabled for subsequent tests.
-* `enableTestCoverage`: enables test coverage plugins and tasks, including bytecode enhancement of classes required to track said
-coverage. Note that this introduces some overhead when running tests and hence why it's disabled by default (the overhead
-varies, but 15-20% is a reasonable estimate).
-
-### Dependency Analysis ###
-
-The gradle [dependency debugging documentation](https://docs.gradle.org/current/userguide/viewing_debugging_dependencies.html) mentions using the `dependencies` or `dependencyInsight` tasks to debug dependencies for the root project or individual subprojects.
-
-Alternatively, use the `allDeps` or `allDepInsight` tasks for recursively iterating through all subprojects:
-
-    ./gradlew allDeps
-
-    ./gradlew allDepInsight --configuration runtime --dependency com.fasterxml.jackson.core:jackson-databind
-
-These take the same arguments as the builtin variants.
-
-### Running system tests ###
-
-See [tests/README.md](tests/README.md).
-
-### Running in Vagrant ###
-
-See [vagrant/README.md](vagrant/README.md).
-
-### Contribution ###
-
-Apache Kafka is interested in building the community; we would welcome any thoughts or [patches](https://issues.apache.org/jira/browse/KAFKA). You can reach us [on the Apache mailing lists](http://kafka.apache.org/contact.html).
-
-To contribute follow the instructions here:
- * https://kafka.apache.org/contributing.html
+# Kafka 源码学习进度
+
+## 📚 学习目标
+深入理解 Apache Kafka 生产者的工作原理，通过源码阅读和实践掌握核心概念。
+
+---
+
+## ✅ 已完成的学习内容
+
+### 1. 环境搭建
+- ✅ Kafka 源码下载和配置
+- ✅ Java 环境验证（OpenJDK 1.8.0）
+- ✅ Gradle 构建系统理解
+
+### 2. 集群配置与启动
+- ✅ 创建 3 Broker Kafka 集群
+  - Broker 1: localhost:9092 (ID: 1)
+  - Broker 2: localhost:9093 (ID: 2)
+  - Broker 3: localhost:9094 (ID: 3)
+  - ZooKeeper: localhost:2181
+- ✅ 集群验证和测试
+
+### 3. 生产者基础
+- ✅ 创建 `my-producer-test` module
+- ✅ 实现 `SimpleProducer` 类
+- ✅ 实现 `ProducerDemo` 测试类
+- ✅ 理解生产者配置项：
+  - `BOOTSTRAP_SERVERS_CONFIG` - Broker 地址
+  - `KEY_SERIALIZER_CLASS_CONFIG` - Key 序列化器
+  - `VALUE_SERIALIZER_CLASS_CONFIG` - Value 序列化器
+
+### 4. 消费者基础
+- ✅ 实现 `SimpleConsumer` 类
+- ✅ 实现 `ConsumerDemo` 测试类
+- ✅ 理解消费者配置项：
+  - `GROUP_ID_CONFIG` - 消费者组 ID
+  - `KEY_DESERIALIZER_CLASS_CONFIG` - Key 反序列化器
+  - `VALUE_DESERIALIZER_CLASS_CONFIG` - Value 反序列化器
+  - `AUTO_OFFSET_RESET_CONFIG` - 偏移量重置策略
+  - `ENABLE_AUTO_COMMIT_CONFIG` - 自动提交偏移量
+
+### 5. 幂等性生产者
+- ✅ 理解消息顺序问题
+  - 当 `retries > 0` 且 `max.in.flight.requests.per.connection > 1` 时
+  - 第一个批次失败，第二个批次成功，重试导致顺序反转
+- ✅ 实现 `IdempotentProducer` 类
+- ✅ 实现 `IdempotentProducerDemo` 演示
+- ✅ 理解幂等性配置：
+  - `enable.idempotence = true`
+  - `max.in.flight.requests.per.connection ≤ 5`
+  - `retries > 0`
+  - `acks = all`
+
+### 6. 代码质量改进
+- ✅ 使用 SLF4J 日志替代 `printStackTrace()`
+- ✅ 将字段声明为 `final`
+- ✅ 遵循 Kafka 代码规范
+
+### 7. 源码阅读
+- ✅ 查看 `KafkaProducer.java` 源代码
+- ✅ 理解 `send()` 方法的 15 个步骤
+- ✅ 理解 `doSend()` 方法的完整实现
+- ✅ 为 JavaDoc 添加中文注释
+
+---
+
+## 📖 核心知识点
+
+### send() 方法的 15 个步骤
+1. 验证生产者状态
+2. 获取集群元数据
+3. 序列化 Key
+4. 序列化 Value
+5. 选择分区
+6. 创建 TopicPartition
+7. 估算消息大小
+8. 设置时间戳
+9. 创建拦截器回调
+10. 检查事务状态
+11. 添加到累积器
+12. 处理新批次
+13. 更新事务状态
+14. 唤醒发送线程
+15. 返回 Future
+
+### 三种发送方式
+- **异步发送 + 回调**（推荐）- 性能好，能处理错误
+- **同步发送** - 调用 `.get()` 等待结果
+- **发送并忘记** - 不关心结果
+
+### 关键特性
+- 异步发送 - 立即返回，不阻塞
+- 批处理 - 消息先存入缓冲区，然后批量发送
+- 分区选择 - 相同 Key 的消息发送到同一分区
+- 顺序保证 - 同一分区的消息顺序有保证
+- 事务支持 - 支持事务性发送
+- 幂等性 - 支持幂等性生产者
+
+---
+
+## 📁 项目结构
+
+```
+kafka-2.7.2/
+├── my-producer-test/                    # 生产者测试 module
+│   ├── src/main/java/org/apache/kafka/test/
+│   │   ├── SimpleProducer.java          # 简单生产者
+│   │   ├── ProducerDemo.java            # 生产者演示
+│   │   ├── SimpleConsumer.java          # 简单消费者
+│   │   ├── ConsumerDemo.java            # 消费者演示
+│   │   ├── IdempotentProducer.java      # 幂等性生产者
+│   │   └── IdempotentProducerDemo.java  # 幂等性演示
+│   ├── build.gradle                     # Gradle 配置
+│   ├── run-producer.sh                  # 生产者运行脚本
+│   └── run-consumer.sh                  # 消费者运行脚本
+│
+├── cluster/                             # 集群配置
+│   ├── zookeeper.properties             # ZooKeeper 配置
+│   ├── broker-1.properties              # Broker 1 配置
+│   ├── broker-2.properties              # Broker 2 配置
+│   └── broker-3.properties              # Broker 3 配置
+│
+├── clients/src/main/java/org/apache/kafka/clients/producer/
+│   └── KafkaProducer.java               # 生产者源代码（已添加中文注释）
+│
+├── setup-cluster.sh                     # 集群配置脚本
+├── start-cluster.sh                     # 集群启动脚本
+├── stop-cluster.sh                      # 集群停止脚本
+├── test-cluster.sh                      # 集群测试脚本
+├── verify-cluster.sh                    # 集群验证脚本
+│
+└── 文档/
+    ├── PRODUCER_SEND_JAVADOC_CN.md      # send() 方法 JavaDoc 中文翻译
+    ├── PRODUCER_SEND_DETAILS.md         # send() 方法详细解析
+    ├── IDEMPOTENCE.md                   # 幂等性生产者详解
+    ├── CLUSTER_SETUP.md                 # 集群配置指南
+    ├── CLUSTER_QUICK_START.md           # 集群快速参考
+    ├── CLUSTER_STATUS.md                # 集群状态总结
+    └── SOURCE_CODE_REFERENCE.md         # 源代码参考
+```
+
+---
+
+## 🚀 快速命令
+
+### 启动集群
+```bash
+cd /Users/heybox/Downloads/kafka-2.7.2
+bash setup-cluster.sh      # 生成配置
+bash start-cluster.sh      # 启动集群
+bash test-cluster.sh       # 测试集群
+```
+
+### 运行生产者
+```bash
+java -cp "my-producer-test/build/libs/kafka-my-producer-test-2.7.2.jar:clients/build/libs/kafka-clients-2.7.2.jar" \
+  org.apache.kafka.test.ProducerDemo
+```
+
+### 运行消费者
+```bash
+java -cp "my-producer-test/build/libs/kafka-my-producer-test-2.7.2.jar:clients/build/libs/kafka-clients-2.7.2.jar" \
+  org.apache.kafka.test.ConsumerDemo
+```
+
+### 运行幂等性生产者
+```bash
+java -cp "my-producer-test/build/libs/kafka-my-producer-test-2.7.2.jar:clients/build/libs/kafka-clients-2.7.2.jar" \
+  org.apache.kafka.test.IdempotentProducerDemo
+```
+
+### 编译项目
+```bash
+./gradlew :my-producer-test:build
+```
+
+---
+
+## 📊 集群架构
+
+```
+┌─────────────────────────────────────────────┐
+│         Kafka 3 Broker 集群                 │
+├─────────────────────────────────────────────┤
+│                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌────┐│
+│  │  Broker 1    │  │  Broker 2    │  │Br 3││
+│  │  Port 9092   │  │  Port 9093   │  │9094││
+│  │  ID: 1       │  │  ID: 2       │  │ID:3││
+│  └──────────────┘  └──────────────┘  └────┘│
+│         │                 │              │  │
+│         └─────────────────┼──────────────┘  │
+│                           │                 │
+│                    ┌──────▼──────┐          │
+│                    │  ZooKeeper   │          │
+│                    │  Port 2181   │          │
+│                    └──────────────┘          │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+## 📝 源代码位置
+
+### 关键文件
+| 文件 | 行号 | 说明 |
+|------|------|------|
+| KafkaProducer.java | 773-775 | send() 方法入口 |
+| KafkaProducer.java | 883-887 | send() 方法定义 |
+| KafkaProducer.java | 899-1000 | doSend() 实现 |
+| KafkaProducer.java | 777-921 | JavaDoc（已添加中文） |
+
+### 查看源代码
+```bash
+# 查看 send() 方法的 JavaDoc
+sed -n '777,921p' clients/src/main/java/org/apache/kafka/clients/producer/KafkaProducer.java
+
+# 查看 doSend() 方法
+sed -n '899,1000p' clients/src/main/java/org/apache/kafka/clients/producer/KafkaProducer.java
+```
+
+---
+
+## 🎯 下一步学习计划
+
+### 待学习内容
+- [ ] 深入理解 RecordAccumulator 批处理机制
+- [ ] 学习 Sender 线程的工作原理
+- [ ] 理解分区器的实现
+- [ ] 学习拦截器机制
+- [ ] 理解元数据管理
+- [ ] 学习消费者的 poll() 机制
+- [ ] 理解消费者组协调
+- [ ] 学习事务实现原理
+- [ ] 理解副本同步机制
+- [ ] 学习 Leader 选举算法
+
+---
+
+## 📚 参考资源
+
+- **Kafka 官方文档：** https://kafka.apache.org/documentation/
+- **生产者配置：** https://kafka.apache.org/documentation/#producerconfigs
+- **消费者配置：** https://kafka.apache.org/documentation/#consumerconfigs
+- **源代码：** `/Users/heybox/Downloads/kafka-2.7.2/clients/src/main/java/org/apache/kafka/clients/producer/`
+
+---
+
+## 💡 学习心得
+
+### 关键发现
+1. **异步设计** - Kafka 生产者采用异步设计，通过 RecordAccumulator 缓冲区实现批处理
+2. **顺序保证** - 同一分区的消息顺序由 Key 决定，相同 Key 的消息发送到同一分区
+3. **幂等性** - 通过限制并发请求数和重试机制实现幂等性
+4. **性能优化** - 批处理、压缩、异步发送等机制提高吞吐量
+
+### 学习方法
+1. 先理解高层概念（生产者、消费者、分区等）
+2. 再深入源代码理解实现细节
+3. 通过实践代码加深理解
+4. 对比不同的发送方式理解权衡
+
+---
+
+**最后更新：** 2026-01-18
+**学习进度：** 基础阶段完成，进入深入学习阶段

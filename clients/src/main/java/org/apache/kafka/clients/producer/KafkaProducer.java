@@ -775,12 +775,21 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
     }
 
     /**
+     * 【中文翻译】异步地将一条记录发送到主题，并在发送被确认时调用提供的回调函数。
+     *
      * Asynchronously send a record to a topic and invoke the provided callback when the send has been acknowledged.
      * <p>
+     * 【中文】发送是异步的，一旦记录被存储在等待发送的记录缓冲区中，此方法将立即返回。
+     * 这允许并行发送许多记录，而无需在每条记录后阻塞等待响应。
+     *
      * The send is asynchronous and this method will return immediately once the record has been stored in the buffer of
      * records waiting to be sent. This allows sending many records in parallel without blocking to wait for the
      * response after each one.
      * <p>
+     * 【中文】发送的结果是一个 RecordMetadata，指定记录被发送到的分区、分配给它的偏移量和记录的时间戳。
+     * 如果主题使用 CREATE_TIME，时间戳将是用户提供的时间戳，或者如果用户没有为记录指定时间戳，则为记录发送时间。
+     * 如果主题使用 LOG_APPEND_TIME，时间戳将是消息被追加时 Kafka broker 的本地时间。
+     *
      * The result of the send is a {@link RecordMetadata} specifying the partition the record was sent to, the offset
      * it was assigned and the timestamp of the record. If
      * {@link org.apache.kafka.common.record.TimestampType#CREATE_TIME CreateTime} is used by the topic, the timestamp
@@ -788,11 +797,16 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * record. If {@link org.apache.kafka.common.record.TimestampType#LOG_APPEND_TIME LogAppendTime} is used for the
      * topic, the timestamp will be the Kafka broker local time when the message is appended.
      * <p>
+     * 【中文】由于 send 调用是异步的，它为将分配给此记录的 RecordMetadata 返回一个 Future。
+     * 在此 future 上调用 get() 将阻塞直到关联的请求完成，然后返回记录的元数据或抛出发送记录时发生的任何异常。
+     *
      * Since the send call is asynchronous it returns a {@link java.util.concurrent.Future Future} for the
      * {@link RecordMetadata} that will be assigned to this record. Invoking {@link java.util.concurrent.Future#get()
      * get()} on this future will block until the associated request completes and then return the metadata for the record
      * or throw any exception that occurred while sending the record.
      * <p>
+     * 【中文】如果你想模拟一个简单的阻塞调用，你可以立即调用 get() 方法：
+     *
      * If you want to simulate a simple blocking call you can call the <code>get()</code> method immediately:
      *
      * <pre>
@@ -803,6 +817,8 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * producer.send(record).get();
      * }</pre>
      * <p>
+     * 【中文】完全非阻塞的用法可以利用 Callback 参数提供一个回调，该回调将在请求完成时被调用。
+     *
      * Fully non-blocking usage can make use of the {@link Callback} parameter to provide a callback that
      * will be invoked when the request is complete.
      *
@@ -822,6 +838,9 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * }
      * </pre>
      *
+     * 【中文】发送到同一分区的记录的回调保证按顺序执行。也就是说，在下面的例子中，
+     * callback1 保证在 callback2 之前执行。
+     *
      * Callbacks for records being sent to the same partition are guaranteed to execute in order. That is, in the
      * following example <code>callback1</code> is guaranteed to execute before <code>callback2</code>:
      *
@@ -832,6 +851,10 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * }
      * </pre>
      * <p>
+     * 【中文】当用作事务的一部分时，不需要定义回调或检查 future 的结果来检测来自 send 的错误。
+     * 如果任何 send 调用因不可恢复的错误而失败，最终的 commitTransaction() 调用将失败并抛出最后一次失败的 send 的异常。
+     * 当这种情况发生时，你的应用程序应该调用 abortTransaction() 来重置状态并继续发送数据。
+     *
      * When used as part of a transaction, it is not necessary to define a callback or check the result of the future
      * in order to detect errors from <code>send</code>. If any of the send calls failed with an irrecoverable error,
      * the final {@link #commitTransaction()} call will fail and throw the exception from the last failed send. When
@@ -839,6 +862,11 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * data.
      * </p>
      * <p>
+     * 【中文】某些事务性 send 错误无法通过调用 abortTransaction() 来解决。特别是，如果事务性 send 以
+     * ProducerFencedException、OutOfOrderSequenceException、UnsupportedVersionException 或 AuthorizationException 结束，
+     * 那么唯一的选择是调用 close()。致命错误会导致生产者进入一个已失效的状态，在该状态下，
+     * 未来的 API 调用将继续抛出相同的底层错误，包装在新的 KafkaException 中。
+     *
      * Some transactional send errors cannot be resolved with a call to {@link #abortTransaction()}.  In particular,
      * if a transactional send finishes with a {@link ProducerFencedException}, a {@link org.apache.kafka.common.errors.OutOfOrderSequenceException},
      * a {@link org.apache.kafka.common.errors.UnsupportedVersionException}, or an
@@ -847,6 +875,11 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * the same underyling error wrapped in a new {@link KafkaException}.
      * </p>
      * <p>
+     * 【中文】当启用幂等性但未配置 transactional.id 时，情况类似。在这种情况下，
+     * UnsupportedVersionException 和 AuthorizationException 被视为致命错误。但是，ProducerFencedException 不需要被处理。
+     * 此外，在收到 OutOfOrderSequenceException 后，可以继续发送，但这样做可能会导致待处理消息的无序交付。
+     * 为了确保正确的顺序，你应该关闭生产者并创建一个新实例。
+     *
      * It is a similar picture when idempotence is enabled, but no <code>transactional.id</code> has been configured.
      * In this case, {@link org.apache.kafka.common.errors.UnsupportedVersionException} and
      * {@link org.apache.kafka.common.errors.AuthorizationException} are considered fatal errors. However,
@@ -856,28 +889,35 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * producer and create a new instance.
      * </p>
      * <p>
+     * 【中文】如果目标主题的消息格式未升级到 0.11.0.0，幂等和事务性 produce 请求将失败并出现
+     * UnsupportedForMessageFormatException 错误。如果在事务期间遇到这种情况，可以中止并继续。
+     * 但请注意，对同一主题的未来 send 将继续收到相同的异常，直到主题被升级。
+     *
      * If the message format of the destination topic is not upgraded to 0.11.0.0, idempotent and transactional
      * produce requests will fail with an {@link org.apache.kafka.common.errors.UnsupportedForMessageFormatException}
      * error. If this is encountered during a transaction, it is possible to abort and continue. But note that future
      * sends to the same topic will continue receiving the same exception until the topic is upgraded.
      * </p>
      * <p>
+     * 【中文】请注意，回调通常会在生产者的 I/O 线程中执行，因此应该相当快速，否则它们将延迟来自其他线程的消息发送。
+     * 如果你想执行阻塞或计算量大的回调，建议在回调体中使用你自己的 Executor 来并行化处理。
+     *
      * Note that callbacks will generally execute in the I/O thread of the producer and so should be reasonably fast or
      * they will delay the sending of messages from other threads. If you want to execute blocking or computationally
      * expensive callbacks it is recommended to use your own {@link java.util.concurrent.Executor} in the callback body
      * to parallelize processing.
      *
-     * @param record The record to send
-     * @param callback A user-supplied callback to execute when the record has been acknowledged by the server (null
+     * @param record 【中文】要发送的记录 | The record to send
+     * @param callback 【中文】用户提供的回调，在记录被服务器确认时执行（null 表示没有回调）| A user-supplied callback to execute when the record has been acknowledged by the server (null
      *        indicates no callback)
      *
-     * @throws AuthenticationException if authentication fails. See the exception for more details
-     * @throws AuthorizationException fatal error indicating that the producer is not allowed to write
-     * @throws IllegalStateException if a transactional.id has been configured and no transaction has been started, or
+     * @throws AuthenticationException 【中文】如果身份验证失败 | if authentication fails. See the exception for more details
+     * @throws AuthorizationException 【中文】致命错误，表示生产者不被允许写入 | fatal error indicating that the producer is not allowed to write
+     * @throws IllegalStateException 【中文】如果已配置 transactional.id 但未启动事务，或在生产者关闭后调用 send | if a transactional.id has been configured and no transaction has been started, or
      *                               when send is invoked after producer has been closed.
-     * @throws InterruptException If the thread is interrupted while blocked
-     * @throws SerializationException If the key or value are not valid objects given the configured serializers
-     * @throws KafkaException If a Kafka related error occurs that does not belong to the public API exceptions.
+     * @throws InterruptException 【中文】如果线程在阻塞时被中断 | If the thread is interrupted while blocked
+     * @throws SerializationException 【中文】如果 key 或 value 不是根据配置的序列化器的有效对象 | If the key or value are not valid objects given the configured serializers
+     * @throws KafkaException 【中文】如果发生不属于公共 API 异常的 Kafka 相关错误 | If a Kafka related error occurs that does not belong to the public API exceptions.
      */
     @Override
     public Future<RecordMetadata> send(ProducerRecord<K, V> record, Callback callback) {
