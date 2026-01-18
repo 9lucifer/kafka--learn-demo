@@ -1,0 +1,148 @@
+# Kafka 生产者和消费者测试 Module
+
+这是一个简单的 Kafka 生产者和消费者测试 module，用于演示如何使用 Kafka 生产者和消费者 API。
+
+## 项目结构
+
+```
+my-producer-test/
+├── src/main/java/org/apache/kafka/test/
+│   ├── SimpleProducer.java      # 生产者类
+│   ├── ProducerDemo.java        # 生产者测试主类
+│   ├── SimpleConsumer.java      # 消费者类
+│   └── ConsumerDemo.java        # 消费者测试主类
+├── build.gradle                 # Gradle 构建配置
+├── run-producer.sh              # 生产者运行脚本
+└── run-consumer.sh              # 消费者运行脚本
+```
+
+## 编译
+
+在项目根目录运行：
+
+```bash
+./gradlew :my-producer-test:build
+```
+
+## 运行
+
+### 生产者
+
+#### 方式 1：使用脚本
+
+```bash
+bash my-producer-test/run-producer.sh
+```
+
+#### 方式 2：直接使用 Java
+
+```bash
+java -cp "my-producer-test/build/libs/kafka-my-producer-test-2.7.2.jar:clients/build/libs/kafka-clients-2.7.2.jar" \
+  org.apache.kafka.test.ProducerDemo
+```
+
+### 消费者
+
+#### 方式 1：使用脚本
+
+```bash
+bash my-producer-test/run-consumer.sh
+```
+
+#### 方式 2：直接使用 Java
+
+```bash
+java -cp "my-producer-test/build/libs/kafka-my-producer-test-2.7.2.jar:clients/build/libs/kafka-clients-2.7.2.jar" \
+  org.apache.kafka.test.ConsumerDemo
+```
+
+## 前置条件
+
+- Kafka broker 运行在 `localhost:9092`
+- 创建一个名为 `test-topic` 的 topic（可选，Kafka 会自动创建）
+
+## 代码说明
+
+### 生产者
+
+#### SimpleProducer.java
+
+这是一个简单的生产者包装类，提供以下功能：
+
+- 初始化 KafkaProducer
+- 发送消息（异步）
+- 刷新缓冲区
+- 关闭连接
+
+**关键配置：**
+- `BOOTSTRAP_SERVERS_CONFIG`: Kafka broker 地址
+- `KEY_SERIALIZER_CLASS_CONFIG`: Key 序列化器（StringSerializer）
+- `VALUE_SERIALIZER_CLASS_CONFIG`: Value 序列化器（StringSerializer）
+
+#### ProducerDemo.java
+
+这是测试主类，演示如何：
+
+- 创建生产者实例
+- 发送 10 条消息
+- 等待所有消息发送完成
+- 关闭生产者
+
+### 消费者
+
+#### SimpleConsumer.java
+
+这是一个简单的消费者包装类，提供以下功能：
+
+- 初始化 KafkaConsumer
+- 订阅 topic
+- 消费消息
+- 关闭连接
+
+**关键配置：**
+- `BOOTSTRAP_SERVERS_CONFIG`: Kafka broker 地址
+- `GROUP_ID_CONFIG`: 消费者组 ID
+- `KEY_DESERIALIZER_CLASS_CONFIG`: Key 反序列化器（StringDeserializer）
+- `VALUE_DESERIALIZER_CLASS_CONFIG`: Value 反序列化器（StringDeserializer）
+- `AUTO_OFFSET_RESET_CONFIG`: 当没有初始偏移量时的行为（earliest/latest）
+- `ENABLE_AUTO_COMMIT_CONFIG`: 是否自动提交偏移量
+- `AUTO_COMMIT_INTERVAL_MS_CONFIG`: 自动提交的间隔时间
+
+#### ConsumerDemo.java
+
+这是测试主类，演示如何：
+
+- 创建消费者实例
+- 订阅 topic
+- 消费消息（等待 30 秒）
+- 关闭消费者
+
+## 使用示例
+
+### 场景 1：先生产后消费
+
+```bash
+# 终端 1：运行生产者
+bash my-producer-test/run-producer.sh
+
+# 终端 2：运行消费者
+bash my-producer-test/run-consumer.sh
+```
+
+### 场景 2：先消费后生产
+
+```bash
+# 终端 1：运行消费者（会等待 30 秒）
+bash my-producer-test/run-consumer.sh
+
+# 终端 2：运行生产者
+bash my-producer-test/run-producer.sh
+```
+
+## 消息格式
+
+发送的消息格式为：
+- Key: `key-0`, `key-1`, ..., `key-9`
+- Value: `message-0`, `message-1`, ..., `message-9`
+- Topic: `test-topic`
+
